@@ -15,13 +15,18 @@ Rails.application.configure do
   # Enable server timing.
   config.server_timing = true
 
-  # Enable/disable Action Controller caching. By default Action Controller caching is disabled.
-  # Run rails dev:cache to toggle Action Controller caching.
-  if Rails.root.join("tmp/caching-dev.txt").exist?
-    config.public_file_server.headers = { "cache-control" => "public, max-age=#{2.days.to_i}" }
-  else
-    config.action_controller.perform_caching = false
-  end
+  config.public_file_server.headers = {
+    "cache-control" => lambda do |path, _|
+      if path.start_with?("/assets/")
+        # Files in /assets/ are expected to be fully immutable.
+        # If the content change the URL too.
+        "public, immutable, max-age=#{1.year.to_i}"
+      else
+        # For anything else we cache for 1 minute.
+        "public, max-age=#{1.minute.to_i}, stale-while-revalidate=#{5.minutes.to_i}"
+      end
+    end
+  }
 
   # Change to :null_store to avoid any caching.
   config.cache_store = :memory_store
